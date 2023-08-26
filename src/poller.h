@@ -16,6 +16,8 @@ public:
 
     int open(timer_qheap *timer);
 
+	int schedule_timer(ev_handler *eh, const int delay, const int interval);
+
     int add(ev_handler *eh, const int fd, const uint32_t ev);
 
     int append(const int fd, const uint32_t ev);

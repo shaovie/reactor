@@ -23,6 +23,8 @@ public:
 public:
   virtual ~ev_handler() {}
 
+  virtual bool on_open()  { return false; }
+
   // the on_close(const int ev) will be called if below on_read/on_write return false. 
   virtual bool on_read()  { return false; }
 

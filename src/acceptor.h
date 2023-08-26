@@ -2,6 +2,7 @@
 #define ACCEPTOR_H_
 
 #include "socket.h"
+#include "poller.h"
 #include "reactor.h"
 #include "options.h"
 #include "ev_handler.h"
@@ -24,6 +25,34 @@ public:
         if (addr.substr(0, 5) == "unix:")
             return this->uds_open(r, addr.substr(5, addr.length() - 5), opt);
         return this->tcp_open(r, addr, opt);
+    }
+    virtual bool on_read() {
+        int fd = this->get_fd();
+        int conn = -1;
+        for (int i = 0; i < 128; ++i) {
+            conn = ::accept4(fd, nullptr, nullptr, SOCK_NONBLOCK|SOCK_CLOEXEC);
+            if (conn == -1) {
+                if (errno == EINTR) {
+                    continue;
+                } else if (errno == EMFILE) {
+                    // 句柄不足，暂停200毫秒，不然会一直触发事件
+                    if (this->get_poller()->schedule_timer(this, 200, 0) == 0) {
+                        this->get_poller()->remove(fd, ev_handler::ev_all);
+                    }
+                }
+                break;
+            }
+            SVC_HANDLER *sh = new SVC_HANDLER();
+            sh.set_fd(conn);
+            if (sh->open() == false)
+                sh.on_close();
+        }
+        return false;
+    }
+    virtual bool on_timeout(const int64_t) {
+        if (this->get_fd() != -1)
+            this->get_poller()->add(this, this->get_fd(), ev_handler::ev_accept);
+        return false;
     }
 protected:
     // addr: "192.168.0.1:8080" or ":8080"

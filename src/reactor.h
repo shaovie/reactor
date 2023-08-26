@@ -13,7 +13,7 @@ public:
     reactor() = delete;
     reactor(const int n);
 
-    int open(options *opt);
+    int open(const options &opt);
 
     int add_ev_handler(ev_handler *eh, const int fd, const uint32_t events);
 

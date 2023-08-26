@@ -41,6 +41,8 @@ void poller::destroy() {
     delete this;
 }
 int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
+    eh->set_poller(this);
+    eh->set_fd(fd);
 	auto pd = this->poll_descs->new_one(fd);
 	pd->fd = fd;
 	pd->eh = eh;
@@ -51,8 +53,7 @@ int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
 	epev.events = ev;
 	epev.data.ptr = pd;
 
-	auto ret = ::epoll_ctl(this->efd, EPOLL_CTL_ADD, fd, &epev);
-	if (ret == 0)
+	if (::epoll_ctl(this->efd, EPOLL_CTL_ADD, fd, &epev) == 0)
 		return 0;
 	this->poll_descs->del(fd);
 	return -1;

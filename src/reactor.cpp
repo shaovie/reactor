@@ -4,9 +4,8 @@
 #include "timer_qheap.h"
 #include "ev_handler.h"
 
-#include <string.h>
 #include <errno.h>
-
+#include <string.h>
 #include <cstdio>
 #include <thread>
 
@@ -14,9 +13,9 @@ reactor::reactor(int poller_n) {
     this->poller_num = poller_n;
     this->pollers = new poller[poller_n]();
 }
-int reactor::open(options *opt) {
+int reactor::open(const options &opt) {
     for (int i = 0; i < this->poller_num; ++i) {
-        auto timer = new timer_qheap(&this->pollers[i], opt->timer_init_size);
+        auto timer = new timer_qheap(&this->pollers[i], opt.timer_init_size);
         if (timer->open() == -1) {
             delete timer;
             return -1;
@@ -37,6 +36,7 @@ int reactor::add_ev_handler(ev_handler *eh, const int fd, const uint32_t events)
     int i = 0;
     if (this->poller_num > 0)
         i = fd % this->poller_num;
+    eh->set_reactor(this);
     return this->pollers[i].add(eh, fd, events);
 }
 int reactor::append_ev(const int fd, const uint32_t events) {

@@ -31,7 +31,7 @@ public:
 
     void store(const int i, poll_desc *v);
 
-    inline void del(const int i);
+    void del(const int i);
 private:
 	int arr_size;
 	poll_desc *arr;

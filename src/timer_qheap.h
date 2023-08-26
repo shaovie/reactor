@@ -26,9 +26,12 @@ class timer_qheap : public ev_handler {
 public:
 	timer_qheap(poller *p, int reserve);
 	timer_qheap(const timer_qheap &) = delete;
+
     virtual ~timer_qheap();
 public:
-    int timerfd() const { return this->tfd; }
+    int open();
+
+    inline int timerfd() const { return this->tfd; }
 
 	// it's ok return 0, failed return -1
 	int schedule(ev_handler *eh, const int delay, const int interval);
@@ -54,6 +57,7 @@ private:
     static inline int get_child_index(const int parent_index, const int child_num);
 private:
 	int tfd = -1;
+	int64_t timerfd_settime = 0;
     poller *poll = nullptr;
     std::vector<timer_item *> qheap;
 };

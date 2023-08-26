@@ -17,6 +17,10 @@ reactor::reactor(int poller_n) {
 int reactor::open(options *opt) {
     for (int i = 0; i < this->poller_num; ++i) {
         auto timer = new timer_qheap(&this->pollers[i], opt->timer_init_size);
+        if (timer->open() == -1) {
+            delete timer;
+            return -1;
+        }
         if (this->pollers[i].open(timer) != 0) {
             return -1;
         }

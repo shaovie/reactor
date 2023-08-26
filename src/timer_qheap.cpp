@@ -2,6 +2,7 @@
 #include "ev_handler.h"
 
 #include <errno.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/time.h>
@@ -24,6 +25,28 @@ timer_qheap::~timer_qheap() {
 }
 void timer_qheap::destroy() {
     delete this;
+}
+int timer_qheap::open() {
+    int fd = ::timerfd_create(CLOCK_BOOTTIME, TFD_NONBLOCK|TFD_CLOEXEC);
+    if (fd == -1) {
+        fprintf(stderr, "reactor: timerfd_create fail! %s\n", strerror(errno));
+        return -1;
+    }
+    this->tfd = fd;
+    return 0;
+}
+void timer_qheap::adjust_timerfd(int64_t delay /*millisecond*/) {
+	delay *= 1000 * 1000; // nanosecond
+	if (delay < 1)
+		delay = 1; // 1 nanosecond
+	
+	struct timespec ts;
+	ts.tv_sec = delay / 1000;
+	ts.tv_nsec = delay % 1000 * 1000 * 1000;
+	struct itimerspec its;
+	::memset(&its, 0, sizeof(its));
+	its.it_value = ts;
+	::timerfd_settime(this->tfd, 0 /*Relative time*/, &its, nullptr);
 }
 int timer_qheap::get_parent_index(const int index) {
 	return (index - 1) / 4;
@@ -97,6 +120,12 @@ int timer_qheap::schedule(ev_handler *eh, const int delay, const int interval) {
 	item->expire_at = now + delay;
 	item->interval = interval;
 	this->insert(item);
+
+	auto min = this->qheap[0];
+    if (min->expire_at != this->timerfd_settime) {
+        this->adjust_timerfd(min->expire_at - now);
+        this->timerfd_settime = min->expire_at;
+    }
     return 0;
 }
 int timer_qheap::handle_expired(int64_t now) {
@@ -134,17 +163,4 @@ bool timer_qheap::on_read() {
 	if (delay > 0)
 		this->adjust_timerfd(delay);
 	return true;
-}
-void timer_qheap::adjust_timerfd(int64_t delay /*millisecond*/) {
-	delay *= 1000 * 1000; // nanosecond
-	if (delay < 1)
-		delay = 1; // 1 nanosecond
-	
-	struct timespec ts;
-	ts.tv_sec = delay / 1000;
-	ts.tv_nsec = delay % 1000 * 1000 * 1000;
-	struct itimerspec its;
-	::memset(&its, 0, sizeof(its));
-	its.it_value = ts;
-	::timerfd_settime(this->tfd, 0 /*Relative time*/, &its, nullptr);
 }

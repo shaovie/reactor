@@ -1,6 +1,6 @@
 #include "poll_desc.h"
 
-#include <thread>
+#include <mutex>
 
 poll_desc *poll_desc_map::new_one(const int i) {
     if (i < this->arr_size)

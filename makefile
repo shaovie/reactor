@@ -19,7 +19,7 @@
                                 LINKER = g++
                           INCLUDE_DIRS = 
                                   LIBS = -lpthread
-                            OPTIM_FLAG = -O2 -g
+                            OPTIM_FLAG = -O2
                                    CPP = g++
                                 LFLAGS = -shared -fPIC
                               LIB_DIRS =
@@ -39,11 +39,11 @@ ifdef debug
 		ifeq ($(debug), 0)
 	    MACROS += -DNDEBUG
 		else
-		  MACROS += -DDO_DEBUG
+		  MACROS += -g -DDO_DEBUG
 	  endif
 	endif
 else
-  MACROS += -DDO_DEBUG
+  MACROS += -g -DDO_DEBUG
 endif
 
 # To use 'make quiet=1' all the build command will be hidden.
@@ -65,7 +65,7 @@ LFLAGS += $(LIB_DIRS) $(LIBS) $(OPTIM_FLAG)
 all: checkdir $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(Q)$(LINKER) $(strip $(LFLAGS)) -o $@ $(OBJECTS)
+	$(Q)$(LINKER) $(strip $(LFLAGS)) $(MACROS) -o $@ $(OBJECTS)
 
 $(OBJECT_DIR)%.o:%.cpp
 	$(Q)$(CPP) $(strip $(CPPALL_CFLAGS)) -c $< -o $@

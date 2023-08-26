@@ -40,7 +40,7 @@ void poller::destroy() {
 
     delete this;
 }
-int poller::schedule(ev_handler *eh, const int delay, const int interval) {
+int poller::schedule_timer(ev_handler *eh, const int delay, const int interval) {
     return this->timer->schedule(eh, delay, interval);
 }
 int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {

@@ -14,9 +14,9 @@ public:
     poller() = default;
     virtual ~poller();
 
-    int open(timer_qheap *timer);
+    int open(const int timer_init_size);
 
-	int schedule_timer(ev_handler *eh, const int delay, const int interval);
+    int schedule_timer(ev_handler *eh, const int delay, const int interval);
 
     int add(ev_handler *eh, const int fd, const uint32_t ev);
 

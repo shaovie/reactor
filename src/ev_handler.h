@@ -33,8 +33,8 @@ public:
   virtual bool on_timeout(const int64_t /*now*/) 	{ return false; }
   virtual void on_close() { }
 
-  int get_fd() const { return this->fd; }
-  void set_fd(const int v) { this->fd = v; }
+  virtual int get_fd() const { return this->fd; }
+  virtual void set_fd(const int v) { this->fd = v; }
 
   poller *get_poller() const { return this->poll; }
   void set_poller(poller *p) { this->poll = p; }

@@ -7,7 +7,6 @@
 #include <vector>
 
 // Forward declarations
-class poller; 
 class ev_handler;
 class timer_item; 
 
@@ -15,36 +14,35 @@ class timer_item;
 
 class timer_item {
 public:
-	timer_item() = default;
+    timer_item() = default;
 
-	int32_t interval = 0;
-	int64_t expire_at = 0;
-	ev_handler *eh = nullptr;
+    int32_t interval = 0;
+    int64_t expire_at = 0;
+    ev_handler *eh = nullptr;
 };
 
 class timer_qheap : public ev_handler {
 public:
-	timer_qheap(poller *p, int reserve);
-	timer_qheap(const timer_qheap &) = delete;
+    timer_qheap(const int reserve);
+    timer_qheap(const timer_qheap &) = delete;
 
     virtual ~timer_qheap();
 public:
     int open();
 
-    inline int timerfd() const { return this->tfd; }
+    virtual int get_fd() const { return this->tfd; }
+    virtual void set_fd(const int ) { }
 
-	// it's ok return 0, failed return -1
-	int schedule(ev_handler *eh, const int delay, const int interval);
+    // it's ok return 0, failed return -1
+    int schedule(ev_handler *eh, const int delay, const int interval);
 
     int handle_expired(int64_t now);
 
-	virtual bool on_read();
-
-    void destroy();
+    virtual bool on_read();
 private:
     inline void insert(timer_item *);
 
-	timer_item* pop_min(int64_t now, int &delta);
+    timer_item* pop_min(int64_t now, int &delta);
 
     void shift_up(int index);
 
@@ -56,9 +54,8 @@ private:
 
     static inline int get_child_index(const int parent_index, const int child_num);
 private:
-	int tfd = -1;
-	int64_t timerfd_settime = 0;
-    poller *poll = nullptr;
+    int tfd = -1;
+    int64_t timerfd_settime = 0;
     std::vector<timer_item *> qheap;
 };
 

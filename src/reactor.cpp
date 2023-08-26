@@ -15,16 +15,8 @@ reactor::reactor(int poller_n) {
 }
 int reactor::open(const options &opt) {
     for (int i = 0; i < this->poller_num; ++i) {
-        auto timer = new timer_qheap(&this->pollers[i], opt.timer_init_size);
-        if (timer->open() == -1) {
-            delete timer;
-            return -1;
-        }
-        if (this->pollers[i].open(timer) != 0) {
-            return -1;
-        }
-        if (this->pollers[i].add(timer, timer->timerfd(), ev_handler::ev_read) != 0) {
-            fprintf(stderr, "reactor: add timerfd fail! %s\n", strerror(errno));
+        if (this->pollers[i].open(opt.timer_init_size) != 0) {
+            // destroy ?
             return -1;
         }
     }

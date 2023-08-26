@@ -1,34 +1,40 @@
 #include "timer_qheap.h"
 #include "ev_handler.h"
 
+#include <errno.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
 
-timer_qheap::timer_qheap(int reserve) {
-	this->tfd = -1
+timer_qheap::timer_qheap(poller *p, int reserve) {
+	this->tfd = -1;
+    this->poll = p;
 	this->qheap.reserve(reserve);
 }
-void timer_qheap::destroy() {
-    ::close(this->tfd);
-	this->tfd = -1;
-    for (auto itor = this->qheap.begin(); itor != this->qheap.end(); ++itor) {
-        delete *itor;
+timer_qheap::~timer_qheap() {
+    if (this->tfd != -1) {
+        ::close(this->tfd);
+        this->tfd = -1;
     }
+    for (auto itor = this->qheap.begin(); itor != this->qheap.end(); ++itor)
+        delete *itor;
+    
     this->qheap.clear();
-
+}
+void timer_qheap::destroy() {
     delete this;
 }
-static int timer_qheap::get_parent_index(const int index) {
+int timer_qheap::get_parent_index(const int index) {
 	return (index - 1) / 4;
 }
-static int timer_qheap::get_child_index(const int parent_index, const int child_num) {
+int timer_qheap::get_child_index(const int parent_index, const int child_num) {
 	return (4 * parent_index) + child_num + 1;
 }
 void timer_qheap::shift_up(int idx) {
 	auto item = this->qheap[idx];
 	while (idx > 0
-        && item->expire_at < this->qheap[timer_qheap::get_parent_index(idx)].expire_at) {
+        && item->expire_at < this->qheap[timer_qheap::get_parent_index(idx)]->expire_at) {
 		this->qheap[idx] = this->qheap[timer_qheap::get_parent_index(idx)];
 		idx = timer_qheap::get_parent_index(idx);
 	}
@@ -36,21 +42,21 @@ void timer_qheap::shift_up(int idx) {
 }
 
 void timer_qheap::shift_down(int idx) {
-	int child_num = 0, min_child = 0;
+	int min_child = 0;
 	auto item = this->qheap[idx];
 	while (true) {
-		min_child = timer_qheap::get_child_idx(idx, 0);
-		if (min_child >= this->qheap.size())
+		min_child = timer_qheap::get_child_index(idx, 0);
+		if (min_child >= static_cast<int>(this->qheap.size()))
 			break;
 
 		for (int i = 1; i < 4; ++i) {
 			int child_idx = timer_qheap::get_child_index(idx, i);
-			if (child_idx < this->qheap.size()
-                && this->qheap[child_idx].expire_at < this->qheap[min_child].expire_at)
+			if (child_idx < static_cast<int>(this->qheap.size())
+                && this->qheap[child_idx]->expire_at < this->qheap[min_child]->expire_at)
 				min_child = child_idx;
 		}
 
-		if (this->qheap[min_child].expire_at >= item->expire_at)
+		if (this->qheap[min_child]->expire_at >= item->expire_at)
 			break;
 
 		this->qheap[idx] = this->qheap[min_child];
@@ -84,13 +90,14 @@ int timer_qheap::schedule(ev_handler *eh, const int delay, const int interval) {
 		return -1;
 
 	struct timeval tv;
-	tv = ::gettimeofday(&tv, nullptr);
+	::gettimeofday(&tv, nullptr);
 	auto now = tv.tv_sec * 1000 + tv.tv_usec / 1000; // millisecond
 	auto item = new timer_item();
 	item->eh = eh;
 	item->expire_at = now + delay;
 	item->interval = interval;
 	this->insert(item);
+    return 0;
 }
 int timer_qheap::handle_expired(int64_t now) {
 	if (this->qheap.empty())
@@ -113,7 +120,12 @@ int timer_qheap::handle_expired(int64_t now) {
 }
 bool timer_qheap::on_read() {
 	int64_t v = 0;
-	::read(this->tfd, &v, sizeof(v));
+    int ret = 0;
+    do {
+        ret = ::read(this->tfd, &v, sizeof(v));
+        if (ret == -1 && errno == EINTR)
+            continue;
+    } while (false); 
 
 	struct timeval tv;
 	::gettimeofday(&tv, nullptr);
@@ -124,15 +136,15 @@ bool timer_qheap::on_read() {
 	return true;
 }
 void timer_qheap::adjust_timerfd(int64_t delay /*millisecond*/) {
-	delay *= 1000 * 1000 // nanosecond
+	delay *= 1000 * 1000; // nanosecond
 	if (delay < 1)
 		delay = 1; // 1 nanosecond
 	
 	struct timespec ts;
-	ts.tv_sec = delay / 1000
-	ts.tv_nsec = delay % 1000 * 1000 * 1000
+	ts.tv_sec = delay / 1000;
+	ts.tv_nsec = delay % 1000 * 1000 * 1000;
 	struct itimerspec its;
-	::memset(&val, sizeof(its));
+	::memset(&its, 0, sizeof(its));
 	its.it_value = ts;
 	::timerfd_settime(this->tfd, 0 /*Relative time*/, &its, nullptr);
 }

@@ -14,21 +14,21 @@
                               C_CFLAGS = -Wall -W -Wpointer-arith -pipe -fPIC
                                 MACROS = -D_REENTRANT -D__USE_POSIX
                                     CC = gcc
-                            CPP_CFLAGS = -Wall -W -Wpointer-arith -pipe -fPIC -std=c++11
+                            CPP_CFLAGS = -Wall -Wextra -Wuninitialized -Wpointer-arith -pipe -fPIC -std=c++11
                                   MAKE = make
                                 LINKER = g++
                           INCLUDE_DIRS = 
                                   LIBS = -lpthread
                             OPTIM_FLAG = -O2 -g
                                    CPP = g++
-                                LFLAGS = -Wl -shared -fPIC
+                                LFLAGS = -shared -fPIC
                               LIB_DIRS =
                                  VPATH = src
                             OBJECT_DIR = ./.obj/
                               CPPFILES = \
                                          timer_qheap.cpp  \
 										 poller.cpp  \
-                                         poller_desc.cpp  \
+                                         poll_desc.cpp  \
                                          reactor.cpp
 
                                 CFILES = 

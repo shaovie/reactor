@@ -1,17 +1,31 @@
 #include "poller.h"
+#include "options.h"
 #include "ev_handler.h"
 #include "timer_qheap.h"
 #include "poll_desc.h"
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sched.h>
+#include <thread>
 
-#define ready_events_size 128
-
-int poller::open(const int timer_init_size) {
+int poller::open(const options &opt) {
+    if (opt.poll_io_buf_size < 1) {
+        fprintf(stderr, "reactor: poll_io_buf_size=%d < 1\n", opt.poll_io_buf_size);
+        return -1;
+    }
+    if (opt.timer_init_size < 1) {
+        fprintf(stderr, "reactor: timer_init_size=%d < 1\n", opt.timer_init_size);
+        return -1;
+    }
+    if (opt.ready_events_size < 1) {
+        fprintf(stderr, "reactor: ready_events_size=%d < 1\n", opt.ready_events_size);
+        return -1;
+    }
     int fd = ::epoll_create1(EPOLL_CLOEXEC);
     if (fd == -1) {
         fprintf(stderr, "reactor: epoll_create1 fail! %s\n", strerror(errno));
@@ -19,7 +33,7 @@ int poller::open(const int timer_init_size) {
     }
     this->efd = fd;
 
-    auto timer = new timer_qheap(timer_init_size);
+    auto timer = new timer_qheap(opt.timer_init_size);
     if (timer->open() == -1)
         return -1;
 
@@ -29,7 +43,9 @@ int poller::open(const int timer_init_size) {
     }
 
     this->timer = timer;
-    this->ready_events = new epoll_event[ready_events_size]();
+    this->ready_events_size = opt.ready_events_size;
+    this->ready_events = new epoll_event[this->ready_events_size]();
+    this->io_buf = ::malloc(opt.poll_io_buf_size);
     return 0;
 }
 void poller::destroy() {
@@ -108,13 +124,25 @@ int poller::remove(const int fd, const uint32_t ev) {
     pd->events &= (~ev);
     return 0;
 }
+void poller::set_cpu_affinity() {
+    if (this->cpu_id == -1)
+        return;
+    cpu_set_t cpu_set;
+    CPU_ZERO(&cpu_set);
+    CPU_SET(this->cpu_id, &cpu_set);
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set) != 0)
+        fprintf(stderr, "reactor: set cpu affinity fail! %s\n", strerror(errno));
+}
 void poller::run() {
+    this->thread_id = pthread_self();
+    this->set_cpu_affinity();
+
     int nfds = 0, msec = -1;
     struct epoll_event *ev_itor = nullptr;
     poll_desc *pd = nullptr;
     ev_handler *eh = nullptr;
     while (true) {
-        nfds = ::epoll_wait(this->efd, this->ready_events, ready_events_size, msec);
+        nfds = ::epoll_wait(this->efd, this->ready_events, this->ready_events_size, msec);
         if (nfds > 0) {
             for (int i = 0; i < nfds; ++i) {
                 ev_itor = this->ready_events + i;

@@ -14,10 +14,14 @@ reactor::reactor(int poller_n) {
     this->pollers = new poller[poller_n]();
 }
 int reactor::open(const options &opt) {
+    int cpu_num = std::thread::hardware_concurrency();
     for (int i = 0; i < this->poller_num; ++i) {
-        if (this->pollers[i].open(opt.timer_init_size) != 0) {
-            // destroy ?
-            return -1;
+        if (opt.set_cpu_affinity) {
+            int cpu_id = i % cpu_num;
+            this->pollers[i].set_cpu_id(cpu_id);
+        }
+        if (this->pollers[i].open(opt) != 0) {
+            return -1; // destroy ?
         }
     }
     return 0;

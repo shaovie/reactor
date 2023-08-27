@@ -147,6 +147,7 @@ int timer_qheap::handle_expired(int64_t now) {
             item->expire_at = now + item->interval;
             this->insert(item);
         } else {
+            item->eh->set_timer(nullptr);
             delete item;
         }
     }

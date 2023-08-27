@@ -3,7 +3,7 @@
 
 #include "ev_handler.h"
 
-#include <string>
+#include <bits/stringfwd.h>
 
 // Forward declarations
 class reactor;

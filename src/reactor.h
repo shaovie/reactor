@@ -10,8 +10,7 @@ class ev_handler;
 
 class reactor {
 public:
-    reactor() = delete;
-    reactor(const int n);
+    reactor() = default;
 
     int open(const options &opt);
 
@@ -21,10 +20,10 @@ public:
 
     int remove_ev(const int fd, const uint32_t events);
     
-    void run();
+    void run(const bool join = true);
 private:
-    int     poller_num;
-    poller *pollers;
+    int     poller_num = 0;
+    poller *pollers = nullptr;
 };
 
 #endif // REACTOR_H_

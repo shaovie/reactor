@@ -9,11 +9,14 @@
 #include <cstdio>
 #include <thread>
 
-reactor::reactor(int poller_n) {
-    this->poller_num = poller_n;
-    this->pollers = new poller[poller_n]();
-}
 int reactor::open(const options &opt) {
+    if (opt.poller_num < 1) {
+        fprintf(stderr, "reactor: poller_num=%d < 1\n", opt.poller_num);
+        return -1;
+    }
+    this->poller_num = opt.poller_num;
+    this->pollers = new poller[this->poller_num]();
+
     int cpu_num = std::thread::hardware_concurrency();
     for (int i = 0; i < this->poller_num; ++i) {
         if (opt.set_cpu_affinity) {
@@ -51,7 +54,14 @@ int reactor::remove_ev(const int fd, const uint32_t events) {
         i = fd % this->poller_num;
     return this->pollers[i].remove(fd, events);
 }
-void reactor::run() {
+void reactor::run(const bool join) {
+    if (!join) {
+        for (int i = 0; i < this->poller_num; ++i) {
+            std::thread thr(&poller::run, &(this->pollers[i]));
+            thr.detach();
+        }
+        return ;
+    }
     std::thread **threads = new std::thread*[this->poller_num]();
     for (int i = 0; i < this->poller_num; ++i) {
         threads[i] = new std::thread(&poller::run, &(this->pollers[i]));

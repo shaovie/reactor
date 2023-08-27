@@ -17,6 +17,7 @@ public:
     int open(const int timer_init_size);
 
     int schedule_timer(ev_handler *eh, const int delay, const int interval);
+    void cancel_timer(ev_handler *eh);
 
     int add(ev_handler *eh, const int fd, const uint32_t ev);
 

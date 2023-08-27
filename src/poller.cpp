@@ -50,9 +50,11 @@ void poller::destroy() {
 int poller::schedule_timer(ev_handler *eh, const int delay, const int interval) {
     return this->timer->schedule(eh, delay, interval);
 }
+void poller::cancel_timer(ev_handler *eh) {
+    this->timer->cancel(eh);
+}
 int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
     eh->set_poller(this);
-    eh->set_fd(fd);
     auto pd = this->poll_descs->new_one(fd);
     pd->fd = fd;
     pd->eh = eh;

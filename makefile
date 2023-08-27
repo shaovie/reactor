@@ -29,6 +29,8 @@
                                          timer_qheap.cpp  \
 										 poller.cpp  \
                                          poll_desc.cpp  \
+                                         acceptor.cpp  \
+                                         connector.cpp  \
                                          reactor.cpp
 
                                 CFILES = 

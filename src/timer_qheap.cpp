@@ -54,6 +54,7 @@ int timer_qheap::schedule(ev_handler *eh, const int delay, const int interval) {
     item->eh = eh;
     item->expire_at = now + delay;
     item->interval = interval;
+    eh->set_timer(item);
     this->insert(item);
 
     auto min = this->qheap[0];
@@ -62,6 +63,14 @@ int timer_qheap::schedule(ev_handler *eh, const int delay, const int interval) {
         this->timerfd_settime = min->expire_at;
     }
     return 0;
+}
+void timer_qheap::cancel(ev_handler *eh) {
+    auto item = eh->get_timer();
+    if (item == nullptr)
+        return;
+    item->eh = nullptr;
+    item->expire_at = 1;
+    eh->set_timer(nullptr);
 }
 int timer_qheap::get_parent_index(const int index) {
     return (index - 1) / 4;
@@ -132,6 +141,8 @@ int timer_qheap::handle_expired(int64_t now) {
         if (item == nullptr)
             break;
 
+        if (item->eh == nullptr) // canceled
+            continue;
         if (item->eh->on_timeout(now) == true && item->interval > 0) {
             item->expire_at = now + item->interval;
             this->insert(item);

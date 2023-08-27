@@ -36,6 +36,8 @@ public:
     // it's ok return 0, failed return -1
     int schedule(ev_handler *eh, const int delay, const int interval);
 
+    void cancel(ev_handler *eh);
+
     int handle_expired(int64_t now);
 
     virtual bool on_read();

@@ -20,11 +20,10 @@ class ev_handler
     friend class timer_qheap;
 public:
   enum {
-    ev_null       = 0,
-    ev_read       = EPOLLIN | EPOLLRDHUP,
+    ev_read       = EPOLLIN  | EPOLLRDHUP,
     ev_write      = EPOLLOUT | EPOLLRDHUP,
-    ev_accept     = EPOLLIN | EPOLLRDHUP,
-    ev_connect    = EPOLLIN|EPOLLOUT|EPOLLRDHUP,
+    ev_accept     = EPOLLIN  | EPOLLRDHUP,
+    ev_connect    = EPOLLIN  | EPOLLOUT | EPOLLRDHUP,
     ev_all        = ev_read|ev_write|ev_accept|ev_connect,
   };
   enum {

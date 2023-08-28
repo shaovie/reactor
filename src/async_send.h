@@ -41,12 +41,7 @@ public:
         this->readq  = new ringq<async_send::item>(init_size);
         this->writeq = new ringq<async_send::item>(init_size);
     }
-    ~async_send() {
-        if (this->readq != nullptr)
-            delete this->readq;
-        if (this->writeq != nullptr)
-            delete this->writeq;
-    }
+    ~async_send();
 
     int open(poller *);
 

@@ -4,6 +4,15 @@
 
 #include <sys/eventfd.h>
 
+async_send::~async_send() {
+   if (this->efd != -1)
+        ::close(this->efd);
+    
+   if (this->readq != nullptr)
+       delete this->readq;
+   if (this->writeq != nullptr)
+       delete this->writeq;
+}
 int async_send::open(poller *poll) {
     int fd = ::eventfd(0, EFD_NONBLOCK|EFD_CLOEXEC);
     if (fd == -1) {

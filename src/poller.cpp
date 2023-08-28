@@ -36,6 +36,7 @@ int poller::open(const options &opt) {
     }
     this->efd = fd;
 
+    // The following failed operation, ignoring resource release
     auto timer = new timer_qheap(opt.timer_init_size);
     if (timer->open() == -1)
         return -1;
@@ -50,48 +51,30 @@ int poller::open(const options &opt) {
 
     this->poll_descs = new poll_desc_map(opt.max_fd_estimate);
     this->timer = timer;
+
     this->ready_events_size = opt.ready_events_size;
-    this->ready_events = new epoll_event[this->ready_events_size]();
+    this->ready_events = new struct epoll_event[this->ready_events_size]();
+
     this->io_buf_size = opt.poll_io_buf_size;
     this->io_buf = new char[this->io_buf_size];
+
     std::default_random_engine dre;
     dre.seed(this->efd);
     this->seq.store(dre());
-    return 0;
-}
-void poller::destroy() {
-    if (this->timer != nullptr) {
-        delete this->timer;
-        this->timer = nullptr;
-    }
-    if (this->efd != -1) {
-        ::close(this->efd);
-        this->efd = -1;
-    }
 
-    if (this->poll_descs != nullptr) {
-        delete this->poll_descs;
-        this->poll_descs = nullptr;
-    }
-    if (this->ready_events != nullptr) {
-        delete[] this->ready_events;
-        this->ready_events = nullptr;
-    }
-    if (this->io_buf != nullptr) {
-        delete []this->io_buf;
-        this->io_buf = nullptr;
-    }
+    return 0;
 }
 int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
     eh->set_poller(this);
-    eh->set_seq(this->seq++);
+    int64_t seq = this->seq++;
+    eh->set_seq(seq);
     auto pd = this->poll_descs->new_one(fd);
     pd->fd = fd;
     pd->eh = eh;
+    pd->seq = seq;
     this->poll_descs->store(fd, pd);
 
     struct epoll_event epev;
-    ::memset(&epev, 0, sizeof(epoll_event));
     epev.events = ev;
     epev.data.ptr = pd;
 
@@ -105,14 +88,17 @@ int poller::append(const int fd, const uint32_t ev) {
     if (pd == nullptr)
         return -1;
 
-    struct epoll_event epev;
-    ::memset(&epev, 0, sizeof(epoll_event));
-    epev.events = (pd->events | ev);
-    epev.data.ptr = pd;
-    if (::epoll_ctl(this->efd, EPOLL_CTL_MOD, fd, &epev) != 0)
-        return -1;
-
+    // Always save first, recover if failed  (this method is for multi-threading scenarios)."
     pd->events |= ev;
+    
+    struct epoll_event epev;
+    epev.events = pd->events;
+    epev.data.ptr = pd;
+    if (::epoll_ctl(this->efd, EPOLL_CTL_MOD, fd, &epev) != 0) {
+        pd->events &= ~ev;
+        return -1;
+    }
+
     return 0;
 }
 int poller::remove(const int fd, const uint32_t ev) {
@@ -127,14 +113,18 @@ int poller::remove(const int fd, const uint32_t ev) {
         this->poll_descs->del(fd);
         return ::epoll_ctl(this->efd, EPOLL_CTL_DEL, fd, nullptr);
     }
-    struct epoll_event epev;
-    ::memset(&epev, 0, sizeof(epoll_event));
-    epev.events = (pd->events & (~ev));
-    epev.data.ptr = pd;
-    if (::epoll_ctl(this->efd, EPOLL_CTL_MOD, fd, &epev) != 0)
-        return -1;
 
+    // Always save first, recover if failed  (this method is for multi-threading scenarios)."
     pd->events &= (~ev);
+
+    struct epoll_event epev;
+    epev.events = pd->events;
+    epev.data.ptr = pd;
+    if (::epoll_ctl(this->efd, EPOLL_CTL_MOD, fd, &epev) != 0) {
+        pd->events |= ev;
+        return -1;
+    }
+
     return 0;
 }
 void poller::set_cpu_affinity() {
@@ -151,15 +141,16 @@ void poller::run() {
     this->set_cpu_affinity();
 
     int nfds = 0, msec = -1;
-    struct epoll_event *ev_itor = nullptr;
-    poll_desc *pd = nullptr;
+    poll_desc *pd  = nullptr;
     ev_handler *eh = nullptr;
+    struct epoll_event *ev_itor = nullptr;
+
     while (true) {
         nfds = ::epoll_wait(this->efd, this->ready_events, this->ready_events_size, msec);
         if (nfds > 0) {
             for (int i = 0; i < nfds; ++i) {
                 ev_itor = this->ready_events + i;
-                pd = (poll_desc*)ev_itor->data.ptr;
+                pd = (poll_desc*)(ev_itor->data.ptr);
 
                 // EPOLLHUP refer to man 2 epoll_ctl
                 if (ev_itor->events & (EPOLLHUP|EPOLLERR)) {
@@ -193,5 +184,6 @@ void poller::run() {
             break; // exit
         }
     }
-    this->destroy();
+    ::close(this->efd); // Just release this resource and let epoll_ctl direct failure.
+    this->efd = -1; // Thread unsafe
 }

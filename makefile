@@ -31,6 +31,7 @@
                                          poll_desc.cpp  \
                                          acceptor.cpp  \
                                          connector.cpp  \
+                                         async_send.cpp  \
                                          reactor.cpp
 
                                 CFILES = 

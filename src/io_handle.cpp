@@ -1,5 +1,8 @@
 #include "io_handle.h"
 
+char *io_handle::io_buf() {
+    return this->poll->io_buf;
+}
 int io_handle::recv(char* &buff) {
     if (this->fd == -1)
         return -1;
@@ -54,6 +57,7 @@ int io_handle::send(const char *buff, const size_t len) {
 bool io_handle::on_write() {
     if (this->fd == -1)
         return false; // goto on_close
+                      
     int n = this->async_send_buf_q.length();
     for (auto i = 0; i < n; ++i) {
         async_send_buf &asb = this->async_send_buf_q.front();
@@ -99,7 +103,7 @@ void io_handle::sync_ordered_send(const async_send_buf &asb) {
 
     if (ret > 0) { // partial
         this->async_send_buf_size -= ret;
-        if (ret == asb.len - asb.sendn) {
+        if (ret == (asb.len - asb.sendn)) {
             delete[] asb.buf;
             return ;
         }
@@ -113,6 +117,7 @@ void io_handle::sync_ordered_send(const async_send_buf &asb) {
 }
 void io_handle::destroy() {
     ev_handler::destroy();
+
     int n = this->async_send_buf_q.length();
     for (auto i = 0; i < n; ++i) {
         async_send_buf &asb = this->async_send_buf_q.front();

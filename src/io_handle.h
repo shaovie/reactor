@@ -34,6 +34,7 @@ public:
 
     int recv(void* &buff);
     int send(const void *buff, const size_t len);
+    char *io_buf();
 
     virtual bool on_write();
 

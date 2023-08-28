@@ -1,8 +1,6 @@
 #include "poller.h"
 #include "options.h"
 #include "ev_handler.h"
-#include "timer_qheap.h"
-#include "poll_desc.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -12,6 +10,7 @@
 #include <sys/epoll.h>
 #include <sched.h>
 #include <thread>
+#include <random>
 
 int poller::open(const options &opt) {
     if (opt.poll_io_buf_size < 1) {
@@ -24,6 +23,10 @@ int poller::open(const options &opt) {
     }
     if (opt.ready_events_size < 1) {
         fprintf(stderr, "reactor: ready_events_size=%d < 1\n", opt.ready_events_size);
+        return -1;
+    }
+    if (opt.max_fd_estimate < 1) {
+        fprintf(stderr, "reactor: max_fd_estimate=%d < 1\n", opt.max_fd_estimate);
         return -1;
     }
     int fd = ::epoll_create1(EPOLL_CLOEXEC);
@@ -41,11 +44,19 @@ int poller::open(const options &opt) {
         fprintf(stderr, "reactor: add timer to poller fail! %s\n", strerror(errno));
         return -1;
     }
+    this->async_sendq = new async_send(256);
+    if (this->async_sendq->open(this) != 0)
+        return -1;
 
+    this->poll_descs = new poll_desc_map(opt.max_fd_estimate);
     this->timer = timer;
     this->ready_events_size = opt.ready_events_size;
     this->ready_events = new epoll_event[this->ready_events_size]();
-    this->io_buf = ::malloc(opt.poll_io_buf_size);
+    this->io_buf_size = opt.poll_io_buf_size;
+    this->io_buf = new char[this->io_buf_size];
+    std::default_random_engine dre;
+    dre.seed(this->efd);
+    this->seq.store(dre());
     return 0;
 }
 void poller::destroy() {
@@ -58,19 +69,22 @@ void poller::destroy() {
         this->efd = -1;
     }
 
+    if (this->poll_descs != nullptr) {
+        delete this->poll_descs;
+        this->poll_descs = nullptr;
+    }
     if (this->ready_events != nullptr) {
         delete[] this->ready_events;
         this->ready_events = nullptr;
     }
-}
-int poller::schedule_timer(ev_handler *eh, const int delay, const int interval) {
-    return this->timer->schedule(eh, delay, interval);
-}
-void poller::cancel_timer(ev_handler *eh) {
-    this->timer->cancel(eh);
+    if (this->io_buf != nullptr) {
+        delete []this->io_buf;
+        this->io_buf = nullptr;
+    }
 }
 int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
     eh->set_poller(this);
+    eh->set_seq(this->seq++);
     auto pd = this->poll_descs->new_one(fd);
     pd->fd = fd;
     pd->eh = eh;
@@ -88,9 +102,8 @@ int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
 }
 int poller::append(const int fd, const uint32_t ev) {
     auto pd = this->poll_descs->load(fd);
-    if (pd == nullptr) {
+    if (pd == nullptr)
         return -1;
-    }
 
     struct epoll_event epev;
     ::memset(&epev, 0, sizeof(epoll_event));

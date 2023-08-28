@@ -14,6 +14,7 @@ public:
 
     int fd = -1;
 	uint32_t events = 0;
+    int64_t seq = -1;
 	ev_handler *eh = nullptr;
 };
 
@@ -24,6 +25,7 @@ public:
         this->arr_size = arr_size;
         this->arr = new poll_desc[arr_size]();
     }
+    ~poll_desc_map();
 public:
     poll_desc *new_one(const int i);
 

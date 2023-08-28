@@ -12,6 +12,7 @@ public:
     int poll_io_buf_size  = 256 * 1024; // for read & write sync i/o
     int poller_num = std::thread::hardware_concurrency();
     int ready_events_size = 128; // epoll_wait 返回多少准备好的事件
+    int max_fd_estimate = 1024*20; // fds 预估最大数量，超过此数量会用map保存数据（有锁)
 
     // timer option
     int timer_init_size = 1024;

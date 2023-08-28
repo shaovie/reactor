@@ -2,6 +2,16 @@
 
 #include <mutex>
 
+poll_desc_map::~poll_desc_map() {
+    if (this->arr != nullptr)
+        delete[] this->arr;
+    this->mtx.lock();
+    for (auto itor = this->map.begin(); itor != this->map.end();) {
+        delete itor->second;
+        this->map.erase(itor++);
+    }
+    this->mtx.unlock();
+}
 poll_desc *poll_desc_map::new_one(const int i) {
     if (i < this->arr_size)
         return &(this->arr[i]);

@@ -21,6 +21,7 @@ class ev_handler
     friend class connector;
     friend class async_send;
     friend class timer_qheap;
+    friend class poll_sync_opt;
 public:
   enum {
     ev_read       = EPOLLIN  | EPOLLRDHUP,

@@ -36,6 +36,7 @@ public:
     int recv(char* &buff);
     int send(const char *buff, const int len);
     char *io_buf();
+    void *poll_cache_get(const int id);
 
     virtual bool on_write();
 

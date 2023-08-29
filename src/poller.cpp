@@ -1,6 +1,6 @@
+#include "poll_sync_opt.h"
 #include "poller.h"
 #include "options.h"
-#include "ev_handler.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -61,7 +61,17 @@ int poller::open(const options &opt) {
     if (this->async_sendq->open(this) != 0)
         return -1;
 
+    this->poll_sync_opterate = new poll_sync_opt(8);
+    if (this->poll_sync_opterate->open(this) != 0)
+        return -1;
+
     return 0;
+}
+void poller::init_poll_sync_opt(const int t, void *arg) {
+    this->poll_sync_opterate->init(poll_sync_opt::opt_arg(t, arg));
+}
+void poller::do_poll_sync_opt(const int t, void *arg) {
+    this->poll_sync_opterate->push(poll_sync_opt::opt_arg(t, arg));
 }
 int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
     eh->set_poller(this);

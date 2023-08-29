@@ -72,3 +72,11 @@ void reactor::run(const bool join) {
     }
     delete[] threads;
 }
+void reactor::init_poll_sync_opt(const int t, void* args[]) {
+    for (int i = 0; i < this->poller_num; ++i)
+        this->pollers[i].init_poll_sync_opt(t, args[i]);
+}
+void reactor::poll_sync_opt(const int t, void* args[]) {
+    for (int i = 0; i < this->poller_num; ++i)
+        this->pollers[i].do_poll_sync_opt(t, args[i]);
+}

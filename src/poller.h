@@ -8,19 +8,21 @@
 #include <pthread.h>
 #include <cstdint>
 #include <atomic>
+#include <map>
 
 // Forward declarations
 class options;
 class ev_handler; 
 class timer_qheap; 
 class poll_desc_map;
+class poll_sync_opt;
 struct epoll_event; 
-class item;
 
 class poller {
     friend class reactor;
     friend class io_handle;
     friend class async_send;
+    friend class poll_sync_opt;
 public:
     poller() = default;
 
@@ -42,6 +44,22 @@ private:
     inline void push(async_send::item &&asi) { this->async_sendq->push(std::move(asi)); }
     poll_desc *get_poll_desc(const int fd) { return this->poll_descs->load(fd); }
 
+private:
+    void init_poll_sync_opt(const int t, void *arg);
+    void do_poll_sync_opt(const int t, void *arg);
+    void poll_cache_set(const int id, void *val, void (*free_func)(void *)) {
+        auto itor = this->pcache.find(id);
+        if (itor != this->pcache.end())
+            free_func(itor->second);
+        this->pcache[id] = val;
+    }
+    void *poll_cache_get(const int id) {
+        auto itor = this->pcache.find(id);
+        if (itor != this->pcache.end())
+            return itor->second;
+        return nullptr;
+    }
+private:
     void set_cpu_id(const int id) { this->cpu_id = id; }
     void set_cpu_affinity();
     void destroy();
@@ -55,8 +73,10 @@ private:
     timer_qheap *timer = nullptr;
     async_send *async_sendq = nullptr;
     poll_desc_map *poll_descs = nullptr;
+    poll_sync_opt *poll_sync_opterate = nullptr;
     pthread_t thread_id;
     std::atomic<int64_t> seq;
+    std::map<int, void *> pcache;
 };
 
 #endif // POLLER_H_

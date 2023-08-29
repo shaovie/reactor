@@ -4,6 +4,9 @@
 char *io_handle::io_buf() {
     return this->poll->io_buf;
 }
+void *io_handle::poll_cache_get(const int id) {
+    return this->poll->poll_cache_get(id);;
+}
 int io_handle::recv(char* &buff) {
     if (this->fd == -1)
         return -1;

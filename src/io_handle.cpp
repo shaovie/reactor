@@ -1,4 +1,5 @@
 #include "io_handle.h"
+#include "poller.h"
 
 char *io_handle::io_buf() {
     return this->poll->io_buf;
@@ -17,7 +18,7 @@ int io_handle::recv(char* &buff) {
     } while (ret == -1 && errno == EINTR);
     return ret;
 }
-int io_handle::send(const char *buff, const size_t len) {
+int io_handle::send(const char *buff, const int len) {
     if (!pthread_equal(pthread_self(), this->poll->thread_id))
         return this->async_send(buff, len);
 
@@ -27,7 +28,7 @@ int io_handle::send(const char *buff, const size_t len) {
     // sync send in poller thread
     if (!this->async_send_buf_q.empty()) {
         char *bf = new char[len];
-        ::memcopy(bf, buff, len);
+        ::memcpy(bf, buff, len);
         this->async_send_buf_q.push_back(async_send_buf(bf, len));
         this->async_send_buf_size += len;
         return len;
@@ -43,7 +44,7 @@ int io_handle::send(const char *buff, const size_t len) {
             ret = 0;
         auto left = len - ret;
         char *bf = new char[left];
-        ::memcopy(bf, buff + ret, left);
+        ::memcpy(bf, buff + ret, left);
         this->async_send_buf_q.push_back(async_send_buf(bf, left));
         this->async_send_buf_size += left;
         if (this->async_send_polling == false) {
@@ -61,15 +62,15 @@ bool io_handle::on_write() {
     int n = this->async_send_buf_q.length();
     for (auto i = 0; i < n; ++i) {
         async_send_buf &asb = this->async_send_buf_q.front();
-        auto ret = ::send(this->fd, asb->buf + asb->sendn, asb->len - asb->sendn, 0);
+        auto ret = ::send(this->fd, asb.buf + asb.sendn, asb.len - asb.sendn, 0);
         if (ret > 0) {
             this->async_send_buf_size -= ret;
-            if (ret == (asb->len - asb-sendn)) {
+            if (ret == (asb.len - asb.sendn)) {
                 this->async_send_buf_q.pop_front();
-                delete[] asb->buf;
+                delete[] asb.buf;
                 continue;
             }
-            asb->sendn += ret;
+            asb.sendn += ret;
         }
         break;
     }
@@ -79,18 +80,18 @@ bool io_handle::on_write() {
     }
     return true;
 }
-int io_handle::async_send(const char *buff, const size_t len) {
+int io_handle::async_send(const char *buff, const int len) {
     char *bf = new char[len];
-    ::memcopy(bf, buff, len);
+    ::memcpy(bf, buff, len);
     this->poll->push(async_send::item(this->fd, this->seq, async_send_buf(bf, len)));
     return len;
 }
-void io_handle::sync_ordered_send(const async_send_buf &asb) {
+void io_handle::sync_ordered_send(async_send_buf &asb) {
     if (this->fd == -1) {
         delete[] asb.buf;
         return;
     }
-    this->async_send_buf_size += len;
+    this->async_send_buf_size += (asb.len - asb.sendn);
     if (!this->async_send_buf_q.empty()) {
         this->async_send_buf_q.push_back(asb);
         return ;

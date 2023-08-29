@@ -42,7 +42,7 @@ bool acceptor::on_read() {
         if (eh->on_open() == false)
             eh->on_close();
     }
-    return false;
+    return true;
 }
 bool acceptor::on_timeout(const int64_t) {
     if (this->get_fd() != -1)
@@ -52,7 +52,7 @@ bool acceptor::on_timeout(const int64_t) {
 // addr: "192.168.0.1:8080" or ":8080"
 int acceptor::tcp_open(const std::string &addr, const options &opt) {
     auto p = addr.find(":");
-    if (p == addr.npos || p < 7) {
+    if (p == addr.npos || (p > 0 && p < 7)) {
         fprintf(stderr, "reactor: accepor open fail! addr invalid\n");
         return -1;
     }
@@ -137,5 +137,6 @@ int acceptor::listen(const int fd,
         fprintf(stderr, "reactor: add accept ev handler fail! %s\n", strerror(errno));
         return -1;
     }
+    this->set_fd(fd);
     return 0;
 }

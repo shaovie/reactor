@@ -23,7 +23,6 @@ class poller {
     friend class async_send;
 public:
     poller() = default;
-    virtual ~poller();
 
     int open(const options &opt);
 

@@ -29,10 +29,12 @@ public:
     }
 
     void set(const unsigned short port_number, const char *ip) {
-        ::memset(&this->inet_addr, 0, sizeof(this->inet_addr));
         this->inet_addr.sin_family = AF_INET;
         this->inet_addr.sin_port = ::htons(port_number);
-        this->inet_addr.sin_addr.s_addr = ::inet_addr(ip);
+            this->inet_addr.sin_addr.s_addr = INADDR_ANY;
+        if (::strlen(ip) > 0)
+            this->inet_addr.sin_addr.s_addr = ::inet_addr(ip);
+        ::memset(this->inet_addr.sin_zero, 0, sizeof(this->inet_addr.sin_zero));
     }
 
     // return the "dotted decimal" Internet address

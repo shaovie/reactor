@@ -2,6 +2,7 @@
 #define IO_HANDLE_H_
 
 #include "ev_handler.h"
+#include "ringq.h"
 
 class async_send_buf {
 public:
@@ -32,18 +33,19 @@ class io_handle : public ev_handler {
 public:
     io_handle() = default;
 
-    int recv(void* &buff);
-    int send(const void *buff, const size_t len);
+    int recv(char* &buff);
+    int send(const char *buff, const int len);
     char *io_buf();
 
     virtual bool on_write();
 
     void destroy();
 private:
-    virtual void sync_ordered_send(const async_send_buf &asb);
+    virtual void sync_ordered_send(async_send_buf &asb);
 
-    int async_send(const void *buff, const size_t len);
+    int async_send(const char *buff, const int len);
 
+    bool async_send_polling = false;
     int async_send_buf_size = 0;
     ringq<async_send_buf> async_send_buf_q{2};
 };

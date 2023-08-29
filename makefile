@@ -31,6 +31,7 @@
                                          poll_desc.cpp  \
                                          acceptor.cpp  \
                                          connector.cpp  \
+                                         io_handle.cpp  \
                                          async_send.cpp  \
                                          reactor.cpp
 

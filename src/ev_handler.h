@@ -64,7 +64,7 @@ public:
       this->rct  = nullptr;
   }
 private:
-  virtual void sync_ordered_send(const async_send_buf &) { }
+  virtual void sync_ordered_send(async_send_buf &) { }
   inline void set_seq(const int64_t v) { this->seq = v; }
 
   inline void set_poller(poller *p) { this->poll = p; }

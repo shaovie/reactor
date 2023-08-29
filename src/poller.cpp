@@ -37,20 +37,10 @@ int poller::open(const options &opt) {
     this->efd = fd;
 
     // The following failed operation, ignoring resource release
-    auto timer = new timer_qheap(opt.timer_init_size);
-    if (timer->open() == -1)
-        return -1;
-
-    if (this->add(timer, timer->get_fd(), ev_handler::ev_read) != 0) {
-        fprintf(stderr, "reactor: add timer to poller fail! %s\n", strerror(errno));
-        return -1;
-    }
-    this->async_sendq = new async_send(256);
-    if (this->async_sendq->open(this) != 0)
-        return -1;
-
     this->poll_descs = new poll_desc_map(opt.max_fd_estimate);
-    this->timer = timer;
+    std::default_random_engine dre;
+    dre.seed(this->efd);
+    this->seq.store(dre());
 
     this->ready_events_size = opt.ready_events_size;
     this->ready_events = new struct epoll_event[this->ready_events_size]();
@@ -58,9 +48,18 @@ int poller::open(const options &opt) {
     this->io_buf_size = opt.poll_io_buf_size;
     this->io_buf = new char[this->io_buf_size];
 
-    std::default_random_engine dre;
-    dre.seed(this->efd);
-    this->seq.store(dre());
+    this->timer = new timer_qheap(opt.timer_init_size);
+    if (timer->open() == -1)
+        return -1;
+
+    if (this->add(timer, timer->get_fd(), ev_handler::ev_read) != 0) {
+        fprintf(stderr, "reactor: add timer to poller fail! %s\n", strerror(errno));
+        return -1;
+    }
+
+    this->async_sendq = new async_send(256);
+    if (this->async_sendq->open(this) != 0)
+        return -1;
 
     return 0;
 }

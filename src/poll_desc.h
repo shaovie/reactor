@@ -13,9 +13,9 @@ public:
     poll_desc() = default;
 
     int fd = -1;
-	uint32_t events = 0;
+    uint32_t events = 0;
     int64_t seq = -1;
-	ev_handler *eh = nullptr;
+    ev_handler *eh = nullptr;
 };
 
 class poll_desc_map {
@@ -25,21 +25,71 @@ public:
         this->arr_size = arr_size;
         this->arr = new poll_desc[arr_size]();
     }
-    ~poll_desc_map();
+    ~poll_desc_map() {
+        if (this->arr != nullptr)
+            delete[] this->arr;
+        this->mtx.lock();
+        for (auto itor = this->map.begin(); itor != this->map.end();) {
+            delete itor->second;
+            this->map.erase(itor++);
+        }
+        this->mtx.unlock();
+    }
 public:
-    poll_desc *new_one(const int i);
+    inline poll_desc *new_one(const int i) {
+        if (i < this->arr_size)
+            return &(this->arr[i]);
 
-    poll_desc *load(const int i);
+        return new poll_desc();
+    }
 
-    void store(const int i, poll_desc *v);
+    inline poll_desc *load(const int i) {
+        if (i < this->arr_size) {
+            poll_desc *p = &(this->arr[i]);
+            if (p->fd == -1)
+                return nullptr;
+            return p;
+        }
+        std::lock_guard<std::mutex> g(this->mtx);
+        auto ret = this->map.find(i);
+        if (ret != this->map.end())
+            return ret->second;
 
-    void del(const int i);
+        return nullptr;
+    }
+
+    inline void store(const int i, poll_desc *v) {
+        if (i < this->arr_size)
+            return;
+
+        this->mtx.lock();
+        this->map[i] = v;
+        this->mtx.unlock();
+    }
+
+    void del(const int i) {
+        if (i < this->arr_size) {
+            poll_desc *p = &(this->arr[i]);
+            p->events =  0;
+            p->fd     = -1;
+            p->seq    = -1;
+            p->eh     = nullptr;
+            return;
+        }
+        this->mtx.lock();
+        auto ret = this->map.find(i);
+        if (ret != this->map.end()) {
+            delete ret->second;
+            this->map.erase(ret);
+        }
+        this->mtx.unlock();
+    }
 private:
-	int arr_size;
-	poll_desc *arr;
+    int arr_size = 0;
+    poll_desc *arr = nullptr;
 
     std::map<int, poll_desc *> map;
-	std::mutex mtx;
+    std::mutex mtx;
 };
 
 #endif // POLL_DESC_H_

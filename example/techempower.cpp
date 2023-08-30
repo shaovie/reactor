@@ -76,7 +76,6 @@ public:
         conn_reactor->init_poll_sync_opt(poll_sync_opt::sync_cache_t, args);
     }
     virtual bool on_timeout(const int64_t now) {
-        printf("ok\n");
         auto args = this->build_args(now);
         conn_reactor->poll_sync_opt(poll_sync_opt::sync_cache_t, args);
         return true;
@@ -102,25 +101,22 @@ public:
 };
 int main (int argc, char *argv[]) {
     options opt;
+    int poller_num = std::thread::hardware_concurrency();
     if (argc > 1)
-        opt.poller_num = atoi(argv[1]);
+        poller_num = atoi(argv[1]);
 
     signal(SIGPIPE ,SIG_IGN);
 
-    opt.set_cpu_affinity = false;
     reactor *accept_reactor = new reactor();
+    opt.set_cpu_affinity  = false;
     opt.with_timer_shared = true;
+    opt.poller_num = 1;
     if (accept_reactor->open(opt) != 0)
         ::exit(1);
 
-    opt.set_cpu_affinity = true;
-    conn_reactor = new reactor();
-    opt.with_timer_shared = false;
-    if (conn_reactor->open(opt) != 0)
-        ::exit(1);
-
     sync_date *sd = new sync_date();
-    accept_reactor->schedule_timer(sd, 800, 1000);
+    if (accept_reactor->schedule_timer(sd, 800, 1000) != 0)
+        ::exit(1);
     sd->init();
 
     opt.reuse_addr = true;
@@ -128,6 +124,13 @@ int main (int argc, char *argv[]) {
     if (acc.open(":8080", opt) != 0)
         ::exit(1);
     accept_reactor->run(false);
+
+    conn_reactor = new reactor();
+    opt.set_cpu_affinity  = true;
+    opt.with_timer_shared = false;
+    opt.poller_num = poller_num;
+    if (conn_reactor->open(opt) != 0)
+        ::exit(1);
 
     conn_reactor->run();
 }

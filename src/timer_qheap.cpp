@@ -31,13 +31,11 @@ int timer_qheap::open() {
     return 0;
 }
 void timer_qheap::adjust_timerfd(int64_t delay /*millisecond*/) {
-    delay *= 1000 * 1000; // nanosecond
-    if (delay < 1)
-        delay = 1; // 1 nanosecond
-
     struct timespec ts;
     ts.tv_sec = delay / 1000;
     ts.tv_nsec = delay % 1000 * 1000 * 1000;
+    if (delay < 1)
+        ts.tv_nsec = 1;
     struct itimerspec its;
     ::memset(&its, 0, sizeof(its));
     its.it_value = ts;
@@ -49,7 +47,7 @@ int timer_qheap::schedule(ev_handler *eh, const int delay, const int interval) {
 
     struct timeval tv;
     ::gettimeofday(&tv, nullptr);
-    auto now = tv.tv_sec * 1000 + tv.tv_usec / 1000; // millisecond
+    int64_t now = int64_t(tv.tv_sec) * 1000 + tv.tv_usec / 1000; // millisecond
     auto item = new timer_item();
     item->eh = eh;
     item->expire_at = now + delay;

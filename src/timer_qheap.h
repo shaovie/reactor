@@ -7,10 +7,10 @@
 #include <vector>
 
 // Forward declarations
-class ev_handler;
 class timer_item; 
 
 // Quad heap implements
+// This is an unlocked timer that can only be used within the poller.
 
 class timer_item {
 public:
@@ -24,7 +24,6 @@ public:
 class timer_qheap : public ev_handler {
 public:
     timer_qheap(const int reserve);
-    timer_qheap(const timer_qheap &) = delete;
 
     virtual ~timer_qheap();
 public:

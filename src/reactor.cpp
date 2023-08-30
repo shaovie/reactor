@@ -1,7 +1,7 @@
 #include "reactor.h"
 #include "poller.h"
 #include "options.h"
-#include "timer_qheap.h"
+#include "timer_shared.h"
 #include "ev_handler.h"
 
 #include <errno.h>
@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <thread>
 
-int reactor::open(const options &opt) {
+int reactor::open(bool with_timer_shared, const options &opt) {
     if (opt.poller_num < 1) {
         fprintf(stderr, "reactor: poller_num=%d < 1\n", opt.poller_num);
         return -1;
@@ -27,7 +27,20 @@ int reactor::open(const options &opt) {
             return -1; // destroy ?
         }
     }
+    if (with_timer_shared == true) {
+        this->timer = new timer_shared(opt.timer_init_size);
+        if (this->timer->open() != 0)
+            return -1; // destroy ?
+        if (this->add_ev_handler(this->timer, this->timer->get_fd(), ev_handler::ev_read) != 0)
+            return -1; // destroy ?
+    }
     return 0;
+}
+int reactor::schedule_timer(ev_handler *eh, const int delay, const int interval) {
+    return this->timer->schedule(eh, delay, interval);
+}
+void reactor::cancel_timer(ev_handler *eh) {
+    this->timer->cancel(eh);
 }
 int reactor::add_ev_handler(ev_handler *eh, const int fd, const uint32_t events) {
     if (fd < 0 || eh == nullptr || events == 0)

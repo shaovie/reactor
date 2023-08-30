@@ -1,6 +1,8 @@
 # Reactor Event-driven network framework in c++
 reactor is a lightweight, concise i/o event demultiplexer implementation in c++11
 
+[新手看这里](https://zhuanlan.zhihu.com/p/653148135)
+
 ## Features
 
 * I/O event-driven architecture

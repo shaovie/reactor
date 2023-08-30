@@ -67,54 +67,67 @@ ev_handler *gen_http() {
 void release_dates(void *p) {
     delete[] (char *)p;
 }
-void sync_date(bool init) {
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    struct tm tmv;
-    ::localtime_r(&(now.tv_sec), &tmv);
-    char dates[32] = {0};
-    ::strftime(dates, 32, "%a, %d %b %Y %H:%M:%S GMT", &tmv);
-    void **args = new void *[conn_reactor->get_poller_num()];
-    for (int i = 0; i < conn_reactor->get_poller_num(); ++i) {
-        char *ds = new char[32]{0};
-        ::strcpy(ds, dates);
-        poll_sync_opt::sync_cache *arg = new poll_sync_opt::sync_cache();
-        arg->id = pcache_data_t;
-        arg->value = ds;
-        arg->free_func = release_dates;
-        args[i] = arg;
-    }
-    if (init)
+class sync_date : public ev_handler {
+public:
+    void init() {
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        auto args = this->build_args(now.tv_sec);
         conn_reactor->init_poll_sync_opt(poll_sync_opt::sync_cache_t, args);
-    else
-        conn_reactor->poll_sync_opt(poll_sync_opt::sync_cache_t, args);
-}
-void sync_date_timing() {
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        sync_date(false);
     }
-}
+    virtual bool on_timeout(const int64_t now) {
+        printf("ok\n");
+        auto args = this->build_args(now);
+        conn_reactor->poll_sync_opt(poll_sync_opt::sync_cache_t, args);
+        return true;
+    }
+    void ** build_args(const int64_t now) {
+        struct tm tmv;
+        auto nowt = (time_t)now;
+        ::localtime_r(&nowt, &tmv);
+        char dates[32] = {0};
+        ::strftime(dates, 32, "%a, %d %b %Y %H:%M:%S GMT", &tmv);
+        void **args = new void *[conn_reactor->get_poller_num()];
+        for (int i = 0; i < conn_reactor->get_poller_num(); ++i) {
+            char *ds = new char[32]{0};
+            ::strcpy(ds, dates);
+            poll_sync_opt::sync_cache *arg = new poll_sync_opt::sync_cache();
+            arg->id = pcache_data_t;
+            arg->value = ds;
+            arg->free_func = release_dates;
+            args[i] = arg;
+        }
+        return args;
+    }
+};
 int main (int argc, char *argv[]) {
     options opt;
-    opt.set_cpu_affinity = true;
     if (argc > 1)
         opt.poller_num = atoi(argv[1]);
 
     signal(SIGPIPE ,SIG_IGN);
 
+    opt.set_cpu_affinity = false;
+    reactor *accept_reactor = new reactor();
+    opt.with_timer_shared = true;
+    if (accept_reactor->open(opt) != 0)
+        ::exit(1);
+
+    opt.set_cpu_affinity = true;
     conn_reactor = new reactor();
+    opt.with_timer_shared = false;
     if (conn_reactor->open(opt) != 0)
         ::exit(1);
 
-    sync_date(true);
-
-    std::thread thr(sync_date_timing);
-    thr.detach();
+    sync_date *sd = new sync_date();
+    accept_reactor->schedule_timer(sd, 800, 1000);
+    sd->init();
 
     opt.reuse_addr = true;
-    acceptor acc(conn_reactor, gen_http);
+    acceptor acc(accept_reactor, gen_http);
     if (acc.open(":8080", opt) != 0)
         ::exit(1);
+    accept_reactor->run(false);
+
     conn_reactor->run();
 }

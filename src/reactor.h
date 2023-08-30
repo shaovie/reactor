@@ -14,7 +14,7 @@ public:
     reactor() = default;
 
     //= run
-    int open(bool with_timer_shared, const options &opt);
+    int open(const options &opt);
     void run(const bool join = true);
     int get_poller_num() const { return this->poller_num; }
 

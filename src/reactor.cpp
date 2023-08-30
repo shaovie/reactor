@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <thread>
 
-int reactor::open(bool with_timer_shared, const options &opt) {
+int reactor::open(const options &opt) {
     if (opt.poller_num < 1) {
         fprintf(stderr, "reactor: poller_num=%d < 1\n", opt.poller_num);
         return -1;
@@ -27,7 +27,7 @@ int reactor::open(bool with_timer_shared, const options &opt) {
             return -1; // destroy ?
         }
     }
-    if (with_timer_shared == true) {
+    if (opt.with_timer_shared == true) {
         this->timer = new timer_shared(opt.timer_init_size);
         if (this->timer->open() != 0)
             return -1; // destroy ?

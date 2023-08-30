@@ -9,6 +9,7 @@ public:
 
     // reactor option
     bool set_cpu_affinity = true;
+    bool with_timer_shared = false;
     int poll_io_buf_size  = 256 * 1024; // for read & write sync i/o
     int poller_num = std::thread::hardware_concurrency();
     int ready_events_size = 128; // epoll_wait 返回多少准备好的事件

@@ -13,9 +13,9 @@ public:
         this->rq = new item_t[init_size]();
     }
 
-    bool empty() { return this->len == 0; }
-    bool full()  { return this->len == this->size; }
-    int  length() const { return this->len;  }
+    inline bool empty() { return this->len == 0; }
+    inline bool full()  { return this->len == this->size; }
+    inline int length() const { return this->len;  }
 
     inline void push_back(const item_t &v) {
         if (this->full())
@@ -41,7 +41,7 @@ public:
     }
     inline item_t &front() { return this->rq[this->head]; }
 private:
-    inline void grow() {
+    void grow() {
         int new_size = this->size * 2;
         if (new_size == 0)
             new_size = 2;

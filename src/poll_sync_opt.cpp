@@ -12,7 +12,7 @@ poll_sync_opt::~poll_sync_opt() {
    if (this->writeq != nullptr)
        delete this->writeq;
 }
-void poll_sync_opt::init(poll_sync_opt::opt_arg &&arg) {
+void poll_sync_opt::init(const poll_sync_opt::opt_arg &arg) {
     this->do_sync(arg);
 }
 int poll_sync_opt::open(poller *poll) {
@@ -29,9 +29,9 @@ int poll_sync_opt::open(poller *poll) {
     this->efd = fd;
     return 0;
 }
-void poll_sync_opt::push(poll_sync_opt::opt_arg &&arg) {
+void poll_sync_opt::push(const poll_sync_opt::opt_arg &arg) {
     this->mtx.lock();
-    this->writeq->push_back(std::move(arg));
+    this->writeq->push_back(arg);
     this->mtx.unlock();
 
     int expected = 0;

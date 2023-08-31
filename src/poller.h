@@ -41,7 +41,7 @@ public:
 
     void run();
 private:
-    inline void push(async_send::item &&asi) { this->async_sendq->push(std::move(asi)); }
+    inline void push(const async_send::item &asi) { this->async_sendq->push(asi); }
     poll_desc *get_poll_desc(const int fd) { return this->poll_descs->load(fd); }
 
 private:

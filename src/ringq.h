@@ -24,18 +24,11 @@ public:
         this->tail = (this->tail + 1) % this->size;
         ++(this->len);
     }
-    inline void push_back(item_t &&v) {
-        if (this->full())
-            this->grow();
-        this->rq[this->tail] = std::move(v);
-        this->tail = (this->tail + 1) % this->size;
-        ++(this->len);
-    }
     inline void pop_front() {
         if (this->empty())
             return;
 
-        this->rq[this->head] = std::move(item_t()); // clear
+        this->rq[this->head] = item_t(); // clear
         this->head = (this->head + 1) % this->size;
         --(this->len);
     }

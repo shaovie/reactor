@@ -11,6 +11,13 @@ class poll_desc;
 class poll_desc {
 public:
     poll_desc() = default;
+    poll_desc& operator=(const poll_desc &v) {
+        this->fd = v.fd;
+        this->events = v.events;
+        this->seq = v.seq;
+        this->eh = v.eh;
+        return *this;
+    }
 
     int fd = -1;
     uint32_t events = 0;
@@ -29,10 +36,9 @@ public:
         if (this->arr != nullptr)
             delete[] this->arr;
         this->mtx.lock();
-        for (auto itor = this->map.begin(); itor != this->map.end();) {
-            delete itor->second;
-            this->map.erase(itor++);
-        }
+        for (const auto &kv : this->map)
+            delete kv.second;
+        
         this->mtx.unlock();
     }
 public:

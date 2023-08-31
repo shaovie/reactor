@@ -27,11 +27,6 @@ public:
     public:
         opt_arg() = default;
         opt_arg(const int t, void *a) : type(t), arg(a) { }
-        opt_arg& operator=(opt_arg &&v) {
-            this->type = v.type;
-            this->arg = v.arg;
-            return *this;
-        }
         opt_arg& operator=(const opt_arg &v) {
             this->type = v.type;
             this->arg = v.arg;
@@ -53,8 +48,8 @@ public:
 
     virtual bool on_read();
 
-    void init(poll_sync_opt::opt_arg &&arg);
-    void push(poll_sync_opt::opt_arg &&arg);
+    void init(const poll_sync_opt::opt_arg &arg);
+    void push(const poll_sync_opt::opt_arg &arg);
 private:
     void do_sync(const poll_sync_opt::opt_arg &arg);
 

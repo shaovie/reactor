@@ -27,9 +27,9 @@ int async_send::open(poller *poll) {
     this->efd = fd;
     return 0;
 }
-void async_send::push(async_send::item &&asi) {
+void async_send::push(const async_send::item &asi) {
     this->mtx.lock();
-    this->writeq->push_back(std::move(asi));
+    this->writeq->push_back(asi);
     this->mtx.unlock();
 
     int expected = 0;

@@ -8,14 +8,7 @@ class async_send_buf {
 public:
     async_send_buf() = default;
     async_send_buf(char *bf, const int l): len(l), buf(bf) { }
-    async_send_buf(async_send_buf &&v): sendn(v.sendn), len(v.len), buf(v.buf) { }
     async_send_buf(const async_send_buf &v): sendn(v.sendn), len(v.len), buf(v.buf) { }
-    async_send_buf& operator=(async_send_buf &&v) {
-        this->buf = v.buf;
-        this->len = v.len;
-        this->sendn = v.sendn;
-        return *this;
-    }
     async_send_buf& operator=(const async_send_buf &v) {
         this->buf = v.buf;
         this->len = v.len;

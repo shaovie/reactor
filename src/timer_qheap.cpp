@@ -139,8 +139,10 @@ int timer_qheap::handle_expired(int64_t now) {
         if (item == nullptr)
             break;
 
-        if (item->eh == nullptr) // canceled
+        if (item->eh == nullptr) { // canceled
+            delete item;
             continue;
+        }
         if (item->eh->on_timeout(now) == true && item->interval > 0) {
             item->expire_at = now + item->interval;
             this->insert(item);

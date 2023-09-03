@@ -16,9 +16,8 @@ timer_qheap::~timer_qheap() {
         ::close(this->tfd);
         this->tfd = -1;
     }
-    for (auto itor = this->qheap.begin(); itor != this->qheap.end(); ++itor)
-        delete *itor;
-
+    for (const auto &v : this->qheap)
+        delete v;
     this->qheap.clear();
 }
 int timer_qheap::open() {

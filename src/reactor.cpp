@@ -46,7 +46,7 @@ int reactor::add_ev_handler(ev_handler *eh, const int fd, const uint32_t events)
     if (fd < 0 || eh == nullptr || events == 0)
         return -1;
     int i = 0;
-    if (this->poller_num > 0)
+    if (this->poller_num > 1)
         i = fd % this->poller_num;
     eh->set_reactor(this);
     return this->pollers[i].add(eh, fd, events);
@@ -55,7 +55,7 @@ int reactor::append_ev(const int fd, const uint32_t events) {
     if (fd < 0 || events == 0)
         return -1;
     int i = 0;
-    if (this->poller_num > 0)
+    if (this->poller_num > 1)
         i = fd % this->poller_num;
     return this->pollers[i].append(fd, events);
 }
@@ -63,7 +63,7 @@ int reactor::remove_ev(const int fd, const uint32_t events) {
     if (fd < 0 || events == 0)
         return -1;
     int i = 0;
-    if (this->poller_num > 0)
+    if (this->poller_num > 1)
         i = fd % this->poller_num;
     return this->pollers[i].remove(fd, events);
 }

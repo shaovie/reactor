@@ -49,23 +49,60 @@ int poller::open(const options &opt) {
     this->io_buf = new char[this->io_buf_size];
 
     this->timer = new timer_qheap(opt.timer_init_size);
-    if (timer->open() == -1)
+    if (timer->open() == -1) {
+        this->destroy();
         return -1;
+    }
 
     if (this->add(timer, timer->get_fd(), ev_handler::ev_read) != 0) {
         fprintf(stderr, "reactor: add timer to poller fail! %s\n", strerror(errno));
+        this->destroy();
         return -1;
     }
 
     this->async_sendq = new async_send(256);
-    if (this->async_sendq->open(this) != 0)
+    if (this->async_sendq->open(this) != 0) {
+        this->destroy();
         return -1;
+    }
 
     this->poll_sync_opterate = new poll_sync_opt(8);
-    if (this->poll_sync_opterate->open(this) != 0)
+    if (this->poll_sync_opterate->open(this) != 0) {
+        this->destroy();
         return -1;
+    }
 
     return 0;
+}
+void poller::destroy() {
+    if (this->efd == -1) {
+        ::close(this->efd);
+        this->efd = -1;
+    }
+    if (this->poll_descs != nullptr) {
+        delete this->poll_descs;
+        this->poll_descs = nullptr;
+    }
+    if (this->ready_events != nullptr) {
+        delete[] this->ready_events;
+        this->ready_events = nullptr;
+    }
+    if (this->io_buf != nullptr) {
+        delete[] this->io_buf;
+        this->io_buf = nullptr;
+    }
+    if (this->timer != nullptr) {
+        delete this->timer;
+        this->timer = nullptr;
+    }
+    if (this->async_sendq != nullptr) {
+        delete this->async_sendq;
+        this->async_sendq = nullptr;
+    }
+    if (this->poll_sync_opterate != nullptr) {
+        delete this->poll_sync_opterate;
+        this->poll_sync_opterate = nullptr;
+    }
 }
 void poller::init_poll_sync_opt(const int t, void *arg) {
     this->poll_sync_opterate->init(poll_sync_opt::opt_arg(t, arg));
@@ -193,6 +230,7 @@ void poller::run() {
             break; // exit
         }
     }
+
     ::close(this->efd); // Just release this resource and let epoll_ctl direct failure.
     this->efd = -1; // Thread unsafe
 }

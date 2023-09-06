@@ -47,7 +47,7 @@ bool async_send::on_read() {
         std::swap(this->readq, this->writeq);
         this->mtx.unlock();
     }
-    for (auto i = 0; i < 256 && !this->readq->empty(); ++i) {
+    for (auto i = 0; i < 256 && !this->readq->empty(); ++i) { // 1次最多处理256个
         async_send::item &asi = this->readq->front();
         poll_desc *pd = this->poll->get_poll_desc(asi.fd);
         if (pd != nullptr && asi.seq == pd->seq) // 保证对象没有释放呢

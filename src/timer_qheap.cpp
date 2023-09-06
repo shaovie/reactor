@@ -8,6 +8,9 @@
 #include <sys/time.h>
 #include <sys/timerfd.h>
 
+#define get_parent_index(idx) (((idx) - 1) / 4)
+#define get_child_index(parent_index, child_num) ((4 * (parent_index)) + (child_num) + 1)
+
 timer_qheap::timer_qheap(const int reserve) {
     this->qheap.reserve(reserve);
 }
@@ -69,18 +72,12 @@ void timer_qheap::cancel(ev_handler *eh) {
     item->expire_at = 1;
     eh->set_timer(nullptr);
 }
-int timer_qheap::get_parent_index(const int index) {
-    return (index - 1) / 4;
-}
-int timer_qheap::get_child_index(const int parent_index, const int child_num) {
-    return (4 * parent_index) + child_num + 1;
-}
 void timer_qheap::shift_up(int idx) {
     auto item = this->qheap[idx];
     while (idx > 0
-        && item->expire_at < this->qheap[timer_qheap::get_parent_index(idx)]->expire_at) {
-        this->qheap[idx] = this->qheap[timer_qheap::get_parent_index(idx)];
-        idx = timer_qheap::get_parent_index(idx);
+        && item->expire_at < this->qheap[get_parent_index(idx)]->expire_at) {
+        this->qheap[idx] = this->qheap[get_parent_index(idx)];
+        idx = get_parent_index(idx);
     }
     this->qheap[idx] = item;
 }
@@ -89,12 +86,12 @@ void timer_qheap::shift_down(int idx) {
     int min_child = 0;
     auto item = this->qheap[idx];
     while (true) {
-        min_child = timer_qheap::get_child_index(idx, 0);
+        min_child = get_child_index(idx, 0);
         if (min_child >= static_cast<int>(this->qheap.size()))
             break;
 
         for (int i = 1; i < 4; ++i) {
-            int child_idx = timer_qheap::get_child_index(idx, i);
+            int child_idx = get_child_index(idx, i);
             if (child_idx < static_cast<int>(this->qheap.size())
                 && this->qheap[child_idx]->expire_at < this->qheap[min_child]->expire_at)
                 min_child = child_idx;

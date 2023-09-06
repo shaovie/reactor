@@ -51,10 +51,6 @@ private:
 
     void adjust_timerfd(int64_t delay);
 private:
-    static inline int get_parent_index(const int index);
-
-    static inline int get_child_index(const int parent_index, const int child_num);
-private:
     int tfd = -1;
     int64_t timerfd_settime = 0;
     std::vector<timer_item *> qheap;

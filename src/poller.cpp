@@ -40,7 +40,7 @@ int poller::open(const options &opt) {
     this->poll_descs = new poll_desc_map(opt.max_fd_estimate);
     std::default_random_engine dre;
     dre.seed(this->efd);
-    this->seq.store(dre());
+    this->seq.store(dre(), std::memory_order_relaxed);
 
     this->ready_events_size = opt.ready_events_size;
     this->ready_events = new struct epoll_event[this->ready_events_size]();
@@ -112,7 +112,7 @@ void poller::do_poll_sync_opt(const int t, void *arg) {
 }
 int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
     eh->set_poller(this);
-    int64_t seq = this->seq++;
+    int64_t seq = this->seq.fetch_add(1, std::memory_order_relaxed);
     eh->set_seq(seq);
     auto pd = this->poll_descs->new_one(fd);
     pd->fd = fd;

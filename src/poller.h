@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <cstdint>
 #include <atomic>
-#include <map>
+#include <unordered_map>
 
 // Forward declarations
 class options;
@@ -75,8 +75,8 @@ private:
     poll_desc_map *poll_descs = nullptr;
     poll_sync_opt *poll_sync_opterate = nullptr;
     pthread_t thread_id;
-    std::atomic<int64_t> seq;
-    std::map<int, void *> pcache;
+    std::atomic<int64_t> seq = {0};
+    std::unordered_map<int, void *> pcache;
 };
 
 #endif // POLLER_H_

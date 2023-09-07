@@ -1,8 +1,8 @@
 #ifndef POLL_DESC_H_
 #define POLL_DESC_H_
 
-#include <map>
 #include <mutex>
+#include <unordered_map>
 
 // Forward declarations
 class ev_handler;
@@ -28,10 +28,11 @@ public:
 class poll_desc_map {
 public:
     poll_desc_map() = delete;
-    poll_desc_map(const int arr_size) {
-        this->arr_size = arr_size;
-        this->arr = new poll_desc[arr_size]();
-    }
+    poll_desc_map(const int arr_size)
+        : arr_size(arr_size),
+        arr(new poll_desc[arr_size]()),
+        map(1024)
+    { }
     ~poll_desc_map() {
         if (this->arr != nullptr)
             delete[] this->arr;
@@ -94,7 +95,7 @@ private:
     int arr_size = 0;
     poll_desc *arr = nullptr;
 
-    std::map<int, poll_desc *> map;
+    std::unordered_map<int, poll_desc *> map;
     std::mutex mtx;
 };
 

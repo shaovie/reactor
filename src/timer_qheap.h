@@ -37,13 +37,13 @@ public:
 
     void cancel(ev_handler *eh);
 
-    int handle_expired(int64_t now);
+    int64_t handle_expired(int64_t now);
 
     virtual bool on_read();
 private:
     inline void insert(timer_item *);
 
-    timer_item* pop_min(int64_t now, int &delta);
+    timer_item* pop_min(int64_t now, int64_t &delta);
 
     void shift_up(int index);
 

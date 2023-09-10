@@ -109,7 +109,7 @@ void timer_qheap::insert(timer_item *item) {
     this->qheap.push_back(item);
     this->shift_up(this->qheap.size() - 1);
 }
-timer_item* timer_qheap::pop_min(int64_t now, int &delta) {
+timer_item* timer_qheap::pop_min(int64_t now, int64_t &delta) {
     if (this->qheap.empty())
         return nullptr;
 
@@ -125,11 +125,11 @@ timer_item* timer_qheap::pop_min(int64_t now, int &delta) {
 
     return min;
 }
-int timer_qheap::handle_expired(int64_t now) {
+int64_t timer_qheap::handle_expired(int64_t now) {
     if (this->qheap.empty())
         return -1;
 
-    int delta = 0;
+    int64_t delta = 0;
     while (true) {
         auto item = this->pop_min(now, delta);
         if (item == nullptr)
@@ -160,7 +160,7 @@ bool timer_qheap::on_read() {
 
     struct timeval tv;
     ::gettimeofday(&tv, nullptr);
-    auto now = tv.tv_sec * 1000 + tv.tv_usec / 1000; // millisecond
+    int64_t now = int64_t(tv.tv_sec) * 1000 + tv.tv_usec / 1000; // millisecond
     auto delay = this->handle_expired(now);
     if (delay > 0)
         this->adjust_timerfd(delay);

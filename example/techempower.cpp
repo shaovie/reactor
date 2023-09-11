@@ -108,6 +108,7 @@ int main (int argc, char *argv[]) {
     signal(SIGPIPE ,SIG_IGN);
 
     reactor *accept_reactor = new reactor();
+    conn_reactor = new reactor();
     opt.set_cpu_affinity  = false;
     opt.with_timer_shared = true;
     opt.poller_num = 1;
@@ -125,7 +126,6 @@ int main (int argc, char *argv[]) {
         ::exit(1);
     accept_reactor->run(false);
 
-    conn_reactor = new reactor();
     opt.set_cpu_affinity  = true;
     opt.with_timer_shared = false;
     opt.poller_num = poller_num;

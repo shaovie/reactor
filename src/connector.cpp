@@ -48,7 +48,7 @@ public:
 
         // eh部分不能在on_write里边调用, 因为fd对应的eh变化了，在poller中fd对应的eh
         // 没有及时更新, 产生混乱
-        if (this->eh->on_open() == false)
+        if (this->ok == true && this->eh->on_open() == false)
             this->eh->on_close();
         delete this;
     }

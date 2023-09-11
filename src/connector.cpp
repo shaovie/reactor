@@ -23,13 +23,11 @@ public:
             return true;
         int fd = this->get_fd();
         this->set_fd(-1); // From here on, the `fd` resources will be managed by eh.
-        this->get_poller()->remove(fd, ev_handler::ev_all);
         this->get_poller()->cancel_timer(this);
         this->io_ev_trigger = true;
 
+        this->ok = true;
         this->eh->set_fd(fd);
-        if (this->eh->on_open() == false)
-            this->eh->on_close();
         return true;
     }
     virtual bool on_timeout(const int64_t) {
@@ -43,12 +41,17 @@ public:
         return false;
     }
     virtual void on_close() {
-        if (this->timeout_trigger && this->io_ev_trigger) {
-            this->destroy();
-            delete this;
-        }
+        // maybe trigger EPOLLHUP | EPOLLERR
+        if (this->timeout_trigger == false || this->io_ev_trigger == false)
+            this->wrker->cancel_timer(this);
+        this->destroy();
+
+        if (this->eh->on_open() == false)
+            this->eh->on_close();
+        delete this;
     }
 private:
+    bool ok = false;
     bool io_ev_trigger = false;
     bool timeout_trigger = false;
     connector *cn = nullptr;

@@ -13,7 +13,7 @@
 #include <thread>
 
 reactor *conn_reactor = nullptr;
-const char httpheaders1[] = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nServer: goev\r\nContent-Type: text/plain\r\nDate: ";
+const char httpheaders1[] = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nServer: libreactor\r\nContent-Type: text/plain\r\nDate: ";
 const char httpheaders2[] = "\r\nContent-Length: 13\r\n\r\nHello, World!";
 
 const int pcache_data_t = 1;

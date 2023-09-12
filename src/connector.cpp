@@ -42,8 +42,10 @@ public:
     }
     virtual void on_close() {
         // maybe trigger EPOLLHUP | EPOLLERR
-        if (this->timeout_trigger == false || this->io_ev_trigger == false)
-            this->wrker->cancel_timer(this);
+        if (this->timeout_trigger == false || this->io_ev_trigger == false) {
+            this->eh->on_connect_fail(err_connect_fail);
+            this->get_poller()->cancel_timer(this);
+        }
         this->destroy();
 
         // eh部分不能在on_write里边调用, 因为fd对应的eh变化了，在poller中fd对应的eh

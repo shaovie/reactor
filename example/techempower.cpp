@@ -115,11 +115,6 @@ int main (int argc, char *argv[]) {
     if (accept_reactor->open(opt) != 0)
         ::exit(1);
 
-    sync_date *sd = new sync_date();
-    if (accept_reactor->schedule_timer(sd, 800, 1000) != 0)
-        ::exit(1);
-    sd->init();
-
     opt.reuse_addr = true;
     acceptor acc(accept_reactor, gen_http);
     if (acc.open(":8080", opt) != 0)
@@ -131,6 +126,11 @@ int main (int argc, char *argv[]) {
     opt.poller_num = poller_num;
     if (conn_reactor->open(opt) != 0)
         ::exit(1);
+
+    sync_date *sd = new sync_date();
+    if (accept_reactor->schedule_timer(sd, 800, 1000) != 0)
+        ::exit(1);
+    sd->init();
 
     conn_reactor->run();
 }

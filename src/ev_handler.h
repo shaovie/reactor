@@ -24,10 +24,10 @@ class ev_handler
     friend class poll_sync_opt;
 public:
   enum {
-    ev_read       = EPOLLIN  | EPOLLRDHUP,
-    ev_write      = EPOLLOUT | EPOLLRDHUP,
-    ev_accept     = EPOLLIN  | EPOLLRDHUP,
-    ev_connect    = EPOLLIN  | EPOLLOUT | EPOLLRDHUP,
+    ev_read       = EPOLLIN | EPOLLRDHUP,
+    ev_write      = EPOLLOUT,
+    ev_accept     = ev_read,
+    ev_connect    = ev_read | ev_write,
     ev_all        = ev_read|ev_write|ev_accept|ev_connect,
   };
   enum {

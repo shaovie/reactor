@@ -113,7 +113,7 @@ public:
     }
     void ** build_args(const int64_t now) {
         struct tm tmv;
-        auto nowt = (time_t)now;
+        auto nowt = (time_t)(now/1000);
         ::localtime_r(&nowt, &tmv);
         char dates[32] = {0};
         ::strftime(dates, 32, "%a, %d %b %Y %H:%M:%S GMT", &tmv);

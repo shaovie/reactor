@@ -36,11 +36,36 @@ public:
         else if (ret < 0)
             return true;
 
-        if (::strstr(buf, "\r\n\r\n") == nullptr) {
-            // invliad msg
-            return false;
+        if (this->content_length > 0) {
+            int len = std::min(this->content_length, (int64_t)ret);
+            this->content_length -= len;
+            if (this->content_length > 0)
+                return true;
+            this->method = 0;
+            buf = buf + len;
         }
 
+        if (this->method == 0) {
+            if (*buf == 'G') {
+                this->method = 1;
+                if (::strstr(buf, "\r\n\r\n") == nullptr)
+                    return false;
+            } else if (*buf == 'P') {
+                buf[ret] = 0;
+                this->method = 2;
+                char *p = ::strcasestr(buf, "Content-Length: ");
+                if (p == nullptr)
+                    return false;
+                this->content_length = strtoll(p + (sizeof("Content-Length: ") - 1), nullptr, 10);
+                p = ::strstr(p + (sizeof("Content-Length: ") - 1), "\r\n\r\n");
+                if (p == nullptr)
+                    return false;
+                this->content_length -= ret - (p + 4 - buf);
+                if (this->content_length > 0)
+                    return true;
+            } else
+                return false;
+        }
         int writen = 0;
         ::memcpy(buf, httpheaders1, sizeof(httpheaders1)-1);
         writen += sizeof(httpheaders1)-1;
@@ -60,6 +85,9 @@ public:
     virtual void on_close() {
         this->destroy();
     }
+private:
+    int method = 0; // get:1 post/put:2
+    int64_t content_length = 0;
 };
 ev_handler *gen_http() {
     return new http();

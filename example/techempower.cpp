@@ -43,9 +43,10 @@ public:
                 return true;
             this->method = 0;
             buf = buf + len;
+	    ret -= len;
         }
 
-        if (this->method == 0) {
+        if (this->method == 0 && ret > 0) {
             if (*buf == 'G') {
                 this->method = 1;
                 if (::strstr(buf, "\r\n\r\n") == nullptr)
@@ -66,6 +67,8 @@ public:
             } else
                 return false;
         }
+
+	buf = this->io_buf();
         int writen = 0;
         ::memcpy(buf, httpheaders1, sizeof(httpheaders1)-1);
         writen += sizeof(httpheaders1)-1;

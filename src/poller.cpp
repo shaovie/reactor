@@ -117,6 +117,7 @@ int poller::add(ev_handler *eh, const int fd, const uint32_t ev) {
     auto pd = this->poll_descs->new_one(fd);
     pd->fd = fd;
     pd->eh = eh;
+    pd->events = ev;
     pd->seq = seq;
     this->poll_descs->store(fd, pd);
 
@@ -216,7 +217,7 @@ void poller::run() {
                     }
                 }
 
-                if (ev_itor->events & (EPOLLIN)) {
+                if (ev_itor->events & (EPOLLIN|EPOLLRDHUP)) {
                     if (pd->eh->on_read() == false) {
                         eh = pd->eh;
                         this->remove(pd->fd, ev_handler::ev_all); // MUST before on_close

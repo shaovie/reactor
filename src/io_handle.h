@@ -41,7 +41,7 @@ private:
 
     bool async_send_polling = false;
     int async_send_buf_size = 0;
-    ringq<async_send_buf> async_send_buf_q{2};
+    ringq<async_send_buf> *async_send_buf_q = nullptr;
 };
 
 #endif // IO_HANDLE_H_

@@ -29,10 +29,10 @@ int io_handle::send(const char *buff, const int len) {
         return -1;
     
     // sync send in poller thread
-    if (!this->async_send_buf_q.empty()) {
+    if (this->async_send_buf_q != nullptr && !this->async_send_buf_q->empty()) {
         char *bf = new char[len];
         ::memcpy(bf, buff, len);
-        this->async_send_buf_q.push_back(async_send_buf(bf, len));
+        this->async_send_buf_q->push_back(async_send_buf(bf, len));
         this->async_send_buf_size += len;
         return len;
     }
@@ -48,7 +48,9 @@ int io_handle::send(const char *buff, const int len) {
         auto left = len - ret;
         char *bf = new char[left];
         ::memcpy(bf, buff + ret, left);
-        this->async_send_buf_q.push_back(async_send_buf(bf, left));
+        if (this->async_send_buf_q == nullptr)
+            this->async_send_buf_q = new ringq<async_send_buf>(2);
+        this->async_send_buf_q->push_back(async_send_buf(bf, left));
         this->async_send_buf_size += left;
         if (this->async_send_polling == false) {
             this->poll->append(this->fd, ev_handler::ev_write);
@@ -62,22 +64,22 @@ bool io_handle::on_write() {
     if (this->fd == -1)
         return false; // goto on_close
                       
-    int n = this->async_send_buf_q.length();
+    int n = this->async_send_buf_q->length();
     for (auto i = 0; i < n; ++i) {
-        async_send_buf &asb = this->async_send_buf_q.front();
+        async_send_buf &asb = this->async_send_buf_q->front();
         auto ret = ::send(this->fd, asb.buf + asb.sendn, asb.len - asb.sendn, 0);
         if (ret > 0) {
             this->async_send_buf_size -= ret;
             if (ret == (asb.len - asb.sendn)) {
-                this->async_send_buf_q.pop_front();
                 delete[] asb.buf;
+                this->async_send_buf_q->pop_front();
                 continue;
             }
             asb.sendn += ret;
         }
         break;
     }
-    if (this->async_send_buf_q.empty() && this->async_send_polling == true) {
+    if (this->async_send_buf_q->empty() && this->async_send_polling == true) {
         this->poll->remove(this->fd, ev_handler::ev_write);
         this->async_send_polling = false;
     }
@@ -95,8 +97,8 @@ void io_handle::sync_ordered_send(async_send_buf &asb) {
         return;
     }
     this->async_send_buf_size += (asb.len - asb.sendn);
-    if (!this->async_send_buf_q.empty()) {
-        this->async_send_buf_q.push_back(asb);
+    if (this->async_send_buf_q != nullptr && !this->async_send_buf_q->empty()) {
+        this->async_send_buf_q->push_back(asb);
         return ;
     }
 
@@ -113,7 +115,9 @@ void io_handle::sync_ordered_send(async_send_buf &asb) {
         }
         asb.sendn += ret;
     }
-    this->async_send_buf_q.push_back(asb);
+    if (this->async_send_buf_q == nullptr)
+        this->async_send_buf_q = new ringq<async_send_buf>(2);
+    this->async_send_buf_q->push_back(asb);
     if (this->async_send_polling == false) {
         this->poll->append(this->fd, ev_handler::ev_write);
         this->async_send_polling = true;
@@ -122,11 +126,15 @@ void io_handle::sync_ordered_send(async_send_buf &asb) {
 void io_handle::destroy() {
     ev_handler::destroy();
 
-    int n = this->async_send_buf_q.length();
-    for (auto i = 0; i < n; ++i) {
-        async_send_buf &asb = this->async_send_buf_q.front();
-        delete[] asb.buf;
-        this->async_send_buf_q.pop_front();
+    if (this->async_send_buf_q != nullptr) {
+        int n = this->async_send_buf_q->length();
+        for (auto i = 0; i < n; ++i) {
+            async_send_buf &asb = this->async_send_buf_q->front();
+            delete[] asb.buf;
+            this->async_send_buf_q->pop_front();
+        }
+        delete this->async_send_buf_q;
+        this->async_send_buf_size = 0;
+        this->async_send_buf_q = nullptr;
     }
-    this->async_send_buf_size = 0;
 }

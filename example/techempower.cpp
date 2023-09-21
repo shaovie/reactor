@@ -43,7 +43,7 @@ public:
                 return true;
             this->method = 0;
             buf = buf + len;
-	    ret -= len;
+            ret -= len;
         }
 
         if (this->method == 0 && ret > 0) {
@@ -68,7 +68,7 @@ public:
                 return false;
         }
 
-	buf = this->io_buf();
+        buf = this->io_buf();
         int writen = 0;
         ::memcpy(buf, httpheaders1, sizeof(httpheaders1)-1);
         writen += sizeof(httpheaders1)-1;

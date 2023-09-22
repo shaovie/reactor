@@ -32,6 +32,7 @@ public:
     void *poll_cache_get(const int id);
 
     virtual bool on_write();
+    virtual void on_send_buffer_drained() { };
 
     void destroy();
 private:
